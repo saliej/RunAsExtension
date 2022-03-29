@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Windows.Forms;
-using Newtonsoft.Json;
 using RunAsExtension.Library;
 
 namespace UserInfoHelper
@@ -12,12 +10,12 @@ namespace UserInfoHelper
     {
         private List<UserInfo> _originalUserInfoList;
         private List<UserInfo> _unsavedUserInfoList;
-        private string _userInfoPath;
+        private UserInfoUtil _userInfoUtil = new UserInfoUtil();
 
         public MainForm()
         {
             InitializeComponent();
-            _originalUserInfoList = GetUserInfoList();
+            _originalUserInfoList = _userInfoUtil.GetUserInfoList();
             _unsavedUserInfoList = new List<UserInfo>(_originalUserInfoList);
 
             foreach (var userInfo in _originalUserInfoList)
@@ -26,31 +24,7 @@ namespace UserInfoHelper
             }
         }
 
-        private List<UserInfo> GetUserInfoList()
-        {
-            _userInfoPath = EnsureUserInfoPath();
-            var jsonData = File.ReadAllText(_userInfoPath);
-
-            return JsonConvert.DeserializeObject<List<UserInfo>>(jsonData);
-        }
-
-        private static string EnsureUserInfoPath()
-        {
-            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            var path = Path.Combine(appDataPath, @"RunAsExtension\");
-            if (!Directory.Exists(path))
-                Directory.CreateDirectory(path);
-
-            var userInfoPath = Path.Combine(path, "UserInfo.json");
-            if (!File.Exists(userInfoPath))
-            {
-                var serializedList = JsonConvert.SerializeObject(new List<UserInfo>());
-                File.WriteAllText(userInfoPath, serializedList);
-            }
-
-            return userInfoPath;
-        }
-
+        
         private void lbUsers_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (lbUsers.SelectedIndex == -1)
@@ -75,8 +49,7 @@ namespace UserInfoHelper
         private void btnSave_Click(object sender, EventArgs e)
         {
             _originalUserInfoList = new List<UserInfo>(_unsavedUserInfoList);
-            var serializedList = JsonConvert.SerializeObject(_originalUserInfoList, Formatting.Indented);
-            File.WriteAllText(_userInfoPath, serializedList);
+            _userInfoUtil.SaveUserInfoList(_originalUserInfoList);
         }
         
         private void btnAdd_Click(object sender, EventArgs e)
