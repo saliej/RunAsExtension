@@ -74,22 +74,36 @@ namespace RunAsExtension
 
         private void RunAsUser(string userDescription, List<UserInfo> users)
         {
+            var selectedUser = users.FirstOrDefault(u => u.Description == userDescription);
+
+            if (selectedUser != null)
+            {
+                RunProcessAsUser(selectedUser, SelectedItemPaths.First());
+            }
+        }
+
+        private static void RunProcessAsUser(UserInfo selectedUser, string filePath)
+        {
             try
             {
-                var selectedUser = users.FirstOrDefault(u => u.Description == userDescription);
+                var process = new Process();
+                process.StartInfo.UseShellExecute = false;
+                process.StartInfo.WorkingDirectory = Path.GetDirectoryName(filePath);
+                process.StartInfo.Domain = selectedUser.Domain;
+                process.StartInfo.UserName = selectedUser.UserName;
+                process.StartInfo.Password = GetSecureString(CryptoUtil.Decrypt(selectedUser.EncryptedPassword));
 
-                if (selectedUser != null)
+                if (Path.GetExtension(filePath).ToLower() == ".msi")
                 {
-
-                        var process = new Process();
-                        process.StartInfo.UseShellExecute = false;
-                        process.StartInfo.WorkingDirectory = Path.GetDirectoryName(SelectedItemPaths.First());
-                        process.StartInfo.FileName = SelectedItemPaths.First();
-                        process.StartInfo.Domain = selectedUser.Domain;
-                        process.StartInfo.UserName = selectedUser.UserName;
-                        process.StartInfo.Password = GetSecureString(CryptoUtil.Decrypt(selectedUser.EncryptedPassword));
-                        process.Start();
+                    process.StartInfo.FileName = "msiexec";
+                    process.StartInfo.Arguments = $"/i \"{filePath}\"";
                 }
+                else
+                {
+                    process.StartInfo.FileName = filePath;
+                }
+
+                process.Start();
             }
             catch (Exception ex)
             {
